@@ -6,8 +6,8 @@ import java.io.*;
 public class Connection extends Thread implements Observer{
 	public static final String EXIT_COMMAND = "stop";	
 	public static final String WELCOME_STRING = "Hello Please send me your Nickname: ";	
-	public static final String EXIT_STRING = "Bye. Your connection is closed.\r\n";	
-
+	public static final String EXIT_STRING = "Bye. Your connection is closed.\r\n";
+	public static enum controllCommands {Disconnect, Information, Shutdown, Connect};
 	private DataInputStream in;
 	private DataOutputStream out;
 	private Socket clientSocket;
@@ -30,43 +30,68 @@ public class Connection extends Thread implements Observer{
 	}
 	public void run()
 	{
+
 			try{
 				//send welcome Message
 				sendData(WELCOME_STRING);	
 				while(true)
 				{
+					if(getClientSocket().isClosed())
+					{
+						break;
+					}
+
 					//read message
-					String message = new String(receiveData(in));
-					
+					String message = receiveData(getIn());
+
 					//Check incomming Message if its the escape message
 					if (message.length() == EXIT_COMMAND.length() && message.toLowerCase().equals(EXIT_COMMAND)) {
-			            System.out.println("Exiting.");
-			            sendData(EXIT_STRING);
-			            parent.addMessage("Info", getNickName()+" has left the chat.");
-						if(clientSocket != null)
-						{
-							try {
-								clientSocket.close();
-							} catch (IOException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
-						}
-			            return;
+			            disconnect();
 			         }
+			         //controll commands start with an /
+					if(message.length()>1 && message.startsWith("/"))
+					{
+						String[] m_split = message.split(" ",2);
+						//workauround if only the command is passed
+						if(m_split.length<2)
+						{
+							String[] new_m_split = {String.copyValueOf(m_split[0].toCharArray()), ""};
+							m_split = new_m_split;
+						}
+						//cut leading slash
+						m_split[0] = m_split[0].substring(1).toLowerCase();
+						switch(m_split[0])
+						{
+							case "disconnect":
+								disconnect(m_split[1]);
+								break;
+							case "information":
+								parent.addMessage(new Message(Message.messageType.Controll, getNickName(), controllCommands.Information, m_split[1]));
+								break;
+							case "shutdown":
+								parent.addMessage(new Message(Message.messageType.Controll, getNickName(), controllCommands.Shutdown, m_split[1]));
+								break;
+							default:
+								parent.addMessage(new Message(Message.messageType.Controll, getNickName(), controllCommands.Information, "Unknown Command "+m_split[0]+" "+m_split[1]));
+						}
+
+					}
+
+
 					//Check if we need to get the Nick Name:
-					if(nickName == "unknown")
+					if(nickName.equals("unknown"))
 					{
 						setNickName(message);
-						parent.addMessage("Info", getNickName()+" has joined the chat.");
+						parent.addMessage(new Message(Message.messageType.Controll, getNickName(), controllCommands.Connect));
 					}else{
-						parent.addMessage(getNickName(), message);
+						parent.addMessage(new Message(Message.messageType.Message,getNickName(), message));
 					}
 					
 				}
 			}finally{
 				try {
-					clientSocket.close();
+					if(!clientSocket.isClosed())
+						clientSocket.close();
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -74,11 +99,35 @@ public class Connection extends Thread implements Observer{
 			}
 
 	}
+	public void disconnect()
+	{
+		disconnect("");
+	}
+	public void disconnect(String message)
+	{
+		sendData(EXIT_STRING);
+		parent.addMessage(new Message(Message.messageType.Controll, getNickName(), controllCommands.Disconnect, message));
+		parent.deleteObserver(this);
+		if(clientSocket != null)
+		{
+			try {
+				if(!clientSocket.isClosed())
+					clientSocket.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return;
+	}
 	public String receiveData(DataInputStream data)
 	{
+		BufferedReader br = null;
 		String message = "";
 		try {
-			message = data.readLine();
+			br = new BufferedReader(new InputStreamReader(getIn()));
+			message = br.readLine();
+			//message = data.readLine();
 			System.out.println("Received from "+getNickName()+": "+message);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -89,7 +138,7 @@ public class Connection extends Thread implements Observer{
 	public void sendData(String data)
 	{
 		try {
-			out.writeChars(data);
+			getOut().writeBytes(data);
 			System.out.println("Send: "+data);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -134,7 +183,26 @@ public class Connection extends Thread implements Observer{
 	public void update(Observable o, Object arg) {
 		// TODO Auto-generated method stub
 		Message m = (Message)arg;
-		addMessage(m.getNickName(), m.getMessage());
+		switch(m.getType())
+		{
+			case Message:
+				addMessage(m.getNickName(), m.getMessage());
+				break;
+			case Controll:
+				switch(m.getCommand()){
+					case Information:
+						addMessage(m.getNickName(), m.getMessage());
+						break;
+					case Disconnect:
+						disconnect();
+						break;
+					default:
+						addMessage(m.getNickName(), "Server did send an unknown command");
+				}
+
+		}
+
+
 	}
 
 	
