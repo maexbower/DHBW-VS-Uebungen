@@ -10,6 +10,7 @@ import dhbw.it15002.rmi.*;
 public class TCPServer extends Observable{
 	private int port;
 	private ServerSocket listenSocket;
+	private RMIServer rmis;
 	public TCPServer(int pPort)
 	{
 		setPort(pPort);
@@ -34,32 +35,36 @@ public class TCPServer extends Observable{
 	public void addMessage(Message m)
 	{
 		//Test if controll message
-		switch(m.getType()){
-			case Controll:
-				switch (m.getCommand()) {
-					case Shutdown:
-						sendMessage(new Message(Message.messageType.Message, "Server", m.getNickName() + " is shutting down the server. Bye."));
-						sendMessage(new Message(Message.messageType.Controll, "Server", Connection.controllCommands.Disconnect));
-						stopServer();
-						break;
-					case Disconnect:
-						sendMessage(new Message(Message.messageType.Message, "Server", m.getNickName() + "  has disconnected. Bye."));
-						break;
-					case Information:
-						sendMessage(new Message(Message.messageType.Message, "Server", m.getNickName() + " is saying: "+m.getMessage()));
-						break;
-					case Connect:
-						sendMessage(new Message(Message.messageType.Message, "Server", m.getNickName() + " has joined."));
-						break;
-					default:
-						sendMessage(new Message(Message.messageType.Message, "Server", m.getNickName() + " has used a command that is not implemented yet."));
-				}
-				break;
-			case Message:
-					sendMessage(new Message(Message.messageType.Message,m.getNickName(), m.getMessage()));
-				break;
+		try {
+			switch (m.getType()) {
+				case Controll:
+					switch (m.getCommand()) {
+						case Shutdown:
+							sendMessage(new Message(Message.messageType.Message, "Server", m.getNickName() + " is shutting down the server. Bye."));
+							sendMessage(new Message(Message.messageType.Controll, "Server", Connection.controllCommands.Disconnect));
+							stopServer();
+							break;
+						case Disconnect:
+							sendMessage(new Message(Message.messageType.Message, "Server", m.getNickName() + "  has disconnected. Bye."));
+							break;
+						case Information:
+							sendMessage(new Message(Message.messageType.Message, "Server", m.getNickName() + " is saying: " + m.getMessage()));
+							break;
+						case Connect:
+							sendMessage(new Message(Message.messageType.Message, "Server", m.getNickName() + " has joined."));
+							break;
+						default:
+							sendMessage(new Message(Message.messageType.Message, "Server", m.getNickName() + " has used a command that is not implemented yet."));
+					}
+					break;
+				case Message:
+					sendMessage(new Message(Message.messageType.Message, m.getNickName(), m.getMessage()));
+					break;
+			}
+		}catch (RemoteException e)
+		{
+			e.printStackTrace();
 		}
-
 	}
 	public void startServer()
 	{
@@ -103,6 +108,7 @@ public class TCPServer extends Observable{
 	public void stopServer()
 	{
 		try {
+			rmis.stopServer();
 			this.deleteObservers();
 			listenSocket.close();
 		} catch (IOException e) {
@@ -113,9 +119,10 @@ public class TCPServer extends Observable{
 	public void startRMIServer()
 	{
 		System.out.println("try to start RMI Server");
-		RMIServer rmis;
+
 		try {
-			rmis = new RMIServer(new HelloServant(), HelloServant.class.getCanonicalName());
+			RMIInterfaceServant servant = new RMIInterfaceServant(this);
+			rmis = new RMIServer(servant, RMIInterfaceServant.class.getCanonicalName());
 			rmis.start();
 		} catch (RemoteException e) {
 			// TODO Auto-generated catch block

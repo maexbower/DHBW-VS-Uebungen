@@ -1,5 +1,6 @@
 package dhbw.it15002.tcp;
 import java.net.*;
+import java.rmi.RemoteException;
 import java.util.Observable;
 import java.util.Observer;
 import java.io.*;
@@ -28,67 +29,62 @@ public class Connection extends Thread implements Observer{
 		}
 		this.start();
 	}
-	public void run()
-	{
+	public void run() {
 
-			try{
-				//send welcome Message
-				sendData(WELCOME_STRING);	
-				while(true)
-				{
-					if(getClientSocket().isClosed())
-					{
-						break;
-					}
-
-					//read message
-					String message = receiveData(getIn());
-
-					//Check incomming Message if its the escape message
-					if (message.length() == EXIT_COMMAND.length() && message.toLowerCase().equals(EXIT_COMMAND)) {
-			            disconnect();
-			         }
-			         //controll commands start with an /
-					if(message.length()>1 && message.startsWith("/"))
-					{
-						String[] m_split = message.split(" ",2);
-						//workauround if only the command is passed
-						if(m_split.length<2)
-						{
-							String[] new_m_split = {String.copyValueOf(m_split[0].toCharArray()), ""};
-							m_split = new_m_split;
-						}
-						//cut leading slash
-						m_split[0] = m_split[0].substring(1).toLowerCase();
-						switch(m_split[0])
-						{
-							case "disconnect":
-								disconnect(m_split[1]);
-								break;
-							case "information":
-								parent.addMessage(new Message(Message.messageType.Controll, getNickName(), controllCommands.Information, m_split[1]));
-								break;
-							case "shutdown":
-								parent.addMessage(new Message(Message.messageType.Controll, getNickName(), controllCommands.Shutdown, m_split[1]));
-								break;
-							default:
-								parent.addMessage(new Message(Message.messageType.Controll, getNickName(), controllCommands.Information, "Unknown Command "+m_split[0]+" "+m_split[1]));
-						}
-
-					}
-
-
-					//Check if we need to get the Nick Name:
-					if(nickName.equals("unknown"))
-					{
-						setNickName(message);
-						parent.addMessage(new Message(Message.messageType.Controll, getNickName(), controllCommands.Connect));
-					}else{
-						parent.addMessage(new Message(Message.messageType.Message,getNickName(), message));
-					}
-					
+		try {
+			//send welcome Message
+			sendData(WELCOME_STRING);
+			while (true) {
+				if (getClientSocket().isClosed()) {
+					break;
 				}
-			}finally{
+
+				//read message
+				String message = receiveData(getIn());
+
+				//Check incomming Message if its the escape message
+				if (message.length() == EXIT_COMMAND.length() && message.toLowerCase().equals(EXIT_COMMAND)) {
+					disconnect();
+				}
+				//controll commands start with an /
+				if (message.length() > 1 && message.startsWith("/")) {
+					String[] m_split = message.split(" ", 2);
+					//workauround if only the command is passed
+					if (m_split.length < 2) {
+						String[] new_m_split = {String.copyValueOf(m_split[0].toCharArray()), ""};
+						m_split = new_m_split;
+					}
+					//cut leading slash
+					m_split[0] = m_split[0].substring(1).toLowerCase();
+					switch (m_split[0]) {
+						case "disconnect":
+							disconnect(m_split[1]);
+							break;
+						case "information":
+							parent.addMessage(new Message(Message.messageType.Controll, getNickName(), controllCommands.Information, m_split[1]));
+							break;
+						case "shutdown":
+							parent.addMessage(new Message(Message.messageType.Controll, getNickName(), controllCommands.Shutdown, m_split[1]));
+							break;
+						default:
+							parent.addMessage(new Message(Message.messageType.Controll, getNickName(), controllCommands.Information, "Unknown Command " + m_split[0] + " " + m_split[1]));
+					}
+
+				}
+
+
+				//Check if we need to get the Nick Name:
+				if (nickName.equals("unknown")) {
+					setNickName(message);
+					parent.addMessage(new Message(Message.messageType.Controll, getNickName(), controllCommands.Connect));
+				} else {
+					parent.addMessage(new Message(Message.messageType.Message, getNickName(), message));
+				}
+
+			}
+		}catch(RemoteException e){
+			e.printStackTrace();
+		}finally{
 				try {
 					if(!clientSocket.isClosed())
 						clientSocket.close();
@@ -106,7 +102,11 @@ public class Connection extends Thread implements Observer{
 	public void disconnect(String message)
 	{
 		sendData(EXIT_STRING);
-		parent.addMessage(new Message(Message.messageType.Controll, getNickName(), controllCommands.Disconnect, message));
+		try {
+			parent.addMessage(new Message(Message.messageType.Controll, getNickName(), controllCommands.Disconnect, message));
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
 		parent.deleteObserver(this);
 		if(clientSocket != null)
 		{

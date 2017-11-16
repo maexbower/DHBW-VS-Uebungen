@@ -3,3 +3,6 @@
 bin
 .project
 .classpath
+.idea/
+DHBW-VS-Uebungen.iml
+out/

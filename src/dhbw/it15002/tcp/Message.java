@@ -1,33 +1,35 @@
 package dhbw.it15002.tcp;
 
-public class Message {
+import java.io.Serializable;
+import java.rmi.RemoteException;
+
+public class Message implements Serializable {
 	public enum messageType {Controll, Message};
 	private String nickName;
 	private String message;
 	private Connection.controllCommands command;
 
-
-	public Message(messageType pType, String pNickName, String pMessage)
-	{
+	public Message(messageType pType, String pNickName, String pMessage) throws RemoteException {
+		super();
 		setType(pType);
 		setNickName(pNickName);
 		setMessage(pMessage);
 	}
-	public Message(messageType pType, String pNickName, Connection.controllCommands pCommand)
-	{
+	public Message(messageType pType, String pNickName, Connection.controllCommands pCommand) throws RemoteException {
+		super();
 		setType(pType);
 		setNickName(pNickName);
 		setCommand(pCommand);
 	}
-	public Message(messageType pType, String pNickName, Connection.controllCommands pCommand, String pMessage)
-	{
+	public Message(messageType pType, String pNickName, Connection.controllCommands pCommand, String pMessage) throws RemoteException {
+		super();
 		setType(pType);
 		setNickName(pNickName);
 		setCommand(pCommand);
 		setMessage(pMessage);
 	}
-	public Message()
-	{
+	public Message() throws RemoteException {
+		super();
 		setType(null);
 		setNickName(null);
 		setMessage(null);

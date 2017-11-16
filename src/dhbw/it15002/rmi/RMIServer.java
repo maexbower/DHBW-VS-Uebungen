@@ -40,6 +40,18 @@ public class RMIServer extends Thread implements Observer{
 		 }
 
 	 }
+	 public void stopServer()
+	 {
+		 try {
+			 Naming.unbind("//localhost/"+canName);
+		 } catch (RemoteException e) {
+			 e.printStackTrace();
+		 } catch (NotBoundException e) {
+			 e.printStackTrace();
+		 } catch (MalformedURLException e) {
+			 e.printStackTrace();
+		 }
+	 }
 	@Override
 	public void update(Observable o, Object arg) {
 		// TODO Auto-generated method stub
