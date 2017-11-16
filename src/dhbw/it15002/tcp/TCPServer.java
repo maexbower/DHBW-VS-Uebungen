@@ -1,16 +1,19 @@
 package dhbw.it15002.tcp;
 import java.net.*;
+import java.rmi.RemoteException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 import java.io.*;
+import dhbw.it15002.rmi.*;
 public class TCPServer extends Observable{
 	private int port;
 	private ServerSocket listenSocket;
 	public TCPServer(int pPort)
 	{
 		setPort(pPort);
+		startRMIServer();
 		startServer();
 		stopServer();
 	}
@@ -107,6 +110,23 @@ public class TCPServer extends Observable{
 			e.printStackTrace();
 		}
 	}
-
+	public void startRMIServer()
+	{
+		System.out.println("try to start RMI Server");
+		RMIServer rmis;
+		try {
+			rmis = new RMIServer(new HelloServant(), HelloServant.class.getCanonicalName());
+			rmis.start();
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+		int serverport = 5000;
+		TCPServer server = new TCPServer(serverport);
+	}
 	
 }
